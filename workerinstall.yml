@@ -1,0 +1,26 @@
+---
+- name: Install Kubernetes Worker Node
+  hosts: kubeworker
+  remote_user: bmeach
+  become: yes
+  vars:
+    nodetoken: "{{ nodetoken }}"
+    lbip: "{{ lbip }}"
+
+  tasks:
+    - name: Update Repos
+      apt:
+        update_cache: yes
+    - name: Upgrade Repos
+      apt:
+        upgrade: full
+    - name: Check if k3s is Installed
+      stat:
+        path: /var/lib/rancher/k3s/
+      register: k3sfile
+    - name: Ping Load Balancer
+      shell: ping -c 1 -w 2 "{{ lbip }}"
+      ignore_errors: true
+    - name: Install k3s Workers
+      command: curl -sfL https://get.k3s.io | K3S_URL=https://"{{ lbip }}":6443 K3S_TOKEN="{{ nodetoken }}" sh -
+      when: k3sfile.stat.exists == False
